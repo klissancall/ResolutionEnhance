@@ -15,7 +15,7 @@ for i in np.arange(1,101):
         fn = 'MPIf0' + str(i) + '_0r.rgb'
     else:
         fn = 'MPIf' + str(i) + '_0r.rgb'
-    face_dir = '/Users/klissan/cs269/rgb/'
+    face_dir = '../FacesDatabase/faces/rgb/'
     img = plt.imread(face_dir+fn)
 #img = cv2.imread(face_dir)
 #img = cv2.cvtColor( img, cv2.COLOR_RGB2GRAY )
@@ -24,16 +24,21 @@ for i in np.arange(1,101):
     a = np.asarray(gray)
     re_img = np.reshape(gray,(1, gray.shape[0]*gray.shape[1]))
     x.extend(re_img)
-ref = np.reshape(x[0][:],(256,256))
-    
-print(x)
-plt.imshow(gray)
 
+ref = np.reshape(np.mean(x, axis=0), (256,256, 1))
+plt.imshow(np.reshape(ref, (256,256)), cmap='gray')
 
-print(np.array(x).shape)
-ref = np.reshape(x[0][:],(256,256,1))
+# print(np.array(x).shape)
+# ref = np.reshape(x[0][:],(256,256,1))
+# plt.imshow(np.reshape(ref, (256,256)), cmap='gray')
+plt.show()
 img = np.reshape(x[1][:],(256,256,1))
-flow = np.array([])
+plt.imshow(np.reshape(img, (256,256)), cmap='gray')
+plt.show()
+np.set_printoptions(threshold=np.nan)
+ref = ref.astype(float) / 255.
+img = img.astype(float) / 255.
+# flow = np.array([])
 #corr = cv2.calcOpticalFlowFarneback(img, ref, None, 0.5, 3, 10, 10, 5, 1.1, 0)
 #corr = np.array(corr)
 alpha = 0.012
@@ -48,10 +53,8 @@ u, v, im2W = pyflow.coarse2fine_flow(
     img, ref, alpha, ratio, minWidth, nOuterFPIterations, nInnerFPIterations,
     nSORIterations, colType)
 flow = np.concatenate((u[..., None], v[..., None]), axis=2)
-print(flow.shape)
-#print(flow.shape)
 #flow = corr
-print(flow[:,:,0])
-print(flow[:,:,1])
-plt.imshow(flow[:,:,0])
+plt.imshow(flow[:,:,0] - 100)
+plt.show()
 plt.imshow(flow[:,:,1])
+plt.show()
