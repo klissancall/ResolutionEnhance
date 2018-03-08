@@ -25,7 +25,7 @@ function [] = resolution_enhancement()
     % Obtain 32 x 32 low-resolution images using bicubic interpolation
     low_res_images = nan(32,32,200);
     for i=1:200
-        low_res_images(:,:,i) = imresize(squeeze(high_res_images(:,:,i)), [32,32], 'method', 'bicubic');
+        low_res_images(:,:,i) = imresize(high_res_images(:,:,i), [32,32], 'method', 'bicubic');
 %         imshow(low_res_images(:,:,i), []);
     end
     
@@ -42,24 +42,41 @@ function [] = resolution_enhancement()
     % Obtain shape of high-resolution training images using optical flow
     opticFlow = opticalFlowFarneback;   
     train_high_res_ref = train_high_res_images(:,:,1);
-    train_high_res_flow = opticalFlow.empty(99,0);
+    train_high_res_flow = nan(131072,99);
     for i=2:100
-        estimateFlow(opticFlow,squeeze(train_high_res_ref));
-        train_high_res_flow(i-1) = estimateFlow(opticFlow,train_high_res_images(:,:,i));
+        estimateFlow(opticFlow,train_high_res_ref);
+        flow = estimateFlow(opticFlow,train_high_res_images(:,:,i));
+        train_high_res_flow(:, i-1) = flow_zip(flow, 65536);
     end
     
     % Obtain shape of low-resolution images using optical flow
     opticFlow = opticalFlowFarneback;   
     train_low_res_ref = train_low_res_images(:,:,1);
-    train_low_res_flow = opticalFlow.empty(99,0);
-    test_low_res_flow = opticalFlow.empty(99,0);
+    train_low_res_flow = nan(2048,99);
+    test_low_res_flow = nan(2048,99);
     for i=2:100
-        estimateFlow(opticFlow,squeeze(train_low_res_ref));
-        train_low_res_flow(i-1) = estimateFlow(opticFlow,train_low_res_images(:,:,i));
-        estimateFlow(opticFlow,squeeze(train_low_res_ref));
-        test_low_res_flow(i-1) = estimateFlow(opticFlow,test_low_res_images(:,:,i));
+        estimateFlow(opticFlow,train_low_res_ref);
+        flow = estimateFlow(opticFlow,train_low_res_images(:,:,i));
+        train_low_res_flow(:, i-1) = flow_zip(flow, 1024);
+        estimateFlow(opticFlow,train_low_res_ref);
+        flow = estimateFlow(opticFlow,test_low_res_images(:,:,i));
+        test_low_res_flow(:, i-1) = flow_zip(flow, 1024);
     end
     
+    % Obtain textures of high-resolution images using backwards warping
+    
+    % Obtain S+, by performing PCA on high and low-resolution shape
+    train_shape = transpose(vertcat(train_low_res_flow,train_high_res_flow));
+    coeff = pca(train_shape)
+end
+
+% Zip X and Y as a vector like how they want in S+ from two displacement matrices
+function [vector] = flow_zip(flow, size)
+    A = reshape(flow.Vx,[size,1]);
+    B = reshape(flow.Vy,[size,1]);
+    C = [A(:),B(:)].';
+    vector = C(:); % zip x and y
+end
     
     
     
