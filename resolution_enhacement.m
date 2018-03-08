@@ -3,7 +3,7 @@
 function [] = resolution_enhancement() 
 
     % Load the faces in grayscale
-    face_dir = 'FacesDatabase 2/faces/jpg/';
+    face_dir = 'FacesDatabase/faces/jpg/';
     high_res_images = nan(256,256,200);
     for i=1:100
         if i < 10
@@ -65,9 +65,20 @@ function [] = resolution_enhancement()
     
     % Obtain textures of high-resolution images using backwards warping
     
+    % Obtain textures of low-resolution images using backwards warping
+    
     % Obtain S+, by performing PCA on high and low-resolution shape
     train_shape = transpose(vertcat(train_low_res_flow,train_high_res_flow));
-    coeff = pca(train_shape)
+    coeff = pca(train_shape); % Rows of X correspond to observations and columns correspond to variables
+    
+    % Obtain T+, by performing PCA on high and low-resolution texture
+    
+    % Estimate a high-resolution shape from the given low-resolution shape by using S+
+    
+    % Estimate a high-resolution texture from the given low-resolution texture by using S+
+
+    % Synthesize a high-resolution facial image by forward warping the estimated texture with the estimated shape. 
+
 end
 
 % Zip X and Y as a vector like how they want in S+ from two displacement matrices
@@ -78,6 +89,8 @@ function [vector] = flow_zip(flow, size)
     vector = C(:); % zip x and y
 end
     
-    
+% Improve the high-resolution shape/texture by recursive error back-projection.
+function [high_res_shape_or_texture] = recursive_error_back_projection(low_res_data)
+end
     
     
