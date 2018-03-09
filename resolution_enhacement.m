@@ -1,4 +1,4 @@
-% Author: Kevin Huynh
+% Author: Kevin Huynh, Xinyu Wang
 
 function [] = resolution_enhacement() 
 
@@ -84,11 +84,13 @@ function [] = resolution_enhacement()
     train_shape = transpose(vertcat(train_low_res_flow,train_high_res_flow));
     coeff_shape = pca(train_shape); % Rows of X correspond to observations and columns correspond to variables
     train_text = transpose(vertcat(train_low_text,train_high_text));
-    coeff_text = pca(train_text)
+    coeff_text = pca(train_text);
     %Choose # of base
     M = 40;
     eigen_shape = coeff_shape(:,1:M);
     eigen_text = coeff_text(:,1:M);
+    mean_shape = mean(train_shape);
+    mean_text = mean(train_text);
     % Obtain T+, by performing PCA on high and low-resolution texture
     
     % Estimate a high-resolution shape from the given low-resolution shape by using S+
