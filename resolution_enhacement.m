@@ -90,7 +90,27 @@ function [vector] = flow_zip(flow, size)
 end
     
 % Improve the high-resolution shape/texture by recursive error back-projection.
-function [high_res_shape_or_texture] = recursive_error_back_projection(low_res_data)
+function [high_res_estimate] = recursive_error_back_projection(low_res_data, S)
+    T1 = 1;
+    T2 = 1;
+    T = 10;
+    t = 1;
+    w = 1;
+    prevdistance = 0;
+%     high_res_estimate = 
+    low_res_estimate = imresize(high_res_estimate, [32,32], 'method', 'bicubic');
+    distance = imabsdiff(low_res_estimate, high_res_estimate);
+    while (distance >= T1 || abs(prevdistance - distance) >= T2)
+        prevdistance = distance;
+        low_res_error = low_res_data - low_res_estimate;
+%         high_res_estimate = high_res_estimate + w * 
+        low_res_estimate = imresize(high_res_estimate, [32,32], 'method', 'bicubic');
+        distance = imabsdiff(low_res_estimate, high_res_estimate);
+        if (t >= T) 
+            break
+        end
+        t = t + 1;
+    end
 end
     
     
