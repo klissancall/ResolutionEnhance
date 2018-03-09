@@ -1,6 +1,6 @@
 % Author: Kevin Huynh
 
-function [] = resolution_enhancement() 
+function [] = resolution_enhacement() 
 
     % Load the faces in grayscale
     face_dir = 'FacesDatabase/faces/jpg/';
@@ -63,14 +63,23 @@ function [] = resolution_enhancement()
         test_low_res_flow(:, i-1) = flow_zip(flow, 1024);
     end
     
-    % Obtain textures of high-resolution images using backwards warping
-    
-    % Obtain textures of low-resolution images using backwards warping
-    
+    % Obtain textures of high-resolution images
+    % Obtain textures of low-resolution images
+    train_low_text = zeros(32*32,99);
+    train_high_text = zeros(256*256,99);
+    for i = 2 : 100
+        flow_low = reshape(train_low_res_flow(:,i-1), [32,32,2]);
+        low_text = imwarp(train_low_res_images(:,:,i),flow_low);
+        train_low_text(:,i-1) = reshape(low_text,[32*32,1]);
+        flow_high = reshape(train_high_res_flow(:,i-1), [256,256,2]);
+        high_text = imwarp(train_high_res_images(:,:,i),flow_high);
+        train_high_text(:,i-1) = reshape(high_text,[256*256,1]);
+    end
     % Obtain S+, by performing PCA on high and low-resolution shape
     train_shape = transpose(vertcat(train_low_res_flow,train_high_res_flow));
     coeff = pca(train_shape); % Rows of X correspond to observations and columns correspond to variables
-    
+    train_text = transpose(vertcat(train_low_text,train_high_text));
+    coeff = pca(train_text)
     % Obtain T+, by performing PCA on high and low-resolution texture
     
     % Estimate a high-resolution shape from the given low-resolution shape by using S+
