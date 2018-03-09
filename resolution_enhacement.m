@@ -68,18 +68,27 @@ function [] = resolution_enhacement()
     train_low_text = zeros(32*32,99);
     train_high_text = zeros(256*256,99);
     for i = 2 : 100
-        flow_low = reshape(train_low_res_flow(:,i-1), [32,32,2]);
+        %index = (i-2)*1024+1;
+        x_l = reshape(train_low_res_flow(1:1024,i-1),[32,32]);
+        y_l = reshape(train_low_res_flow(1025:2048,i-1),[32,32]);
+        flow_low = cat(3,x_l,y_l);
         low_text = imwarp(train_low_res_images(:,:,i),flow_low);
         train_low_text(:,i-1) = reshape(low_text,[32*32,1]);
-        flow_high = reshape(train_high_res_flow(:,i-1), [256,256,2]);
+        x_h = reshape(train_high_res_flow(1:65536,i-1),[256,256]);
+        y_h = reshape(train_high_res_flow(65537:131072,i-1),[256,256]);
+        flow_high = cat(3,x_h,y_h);
         high_text = imwarp(train_high_res_images(:,:,i),flow_high);
         train_high_text(:,i-1) = reshape(high_text,[256*256,1]);
     end
     % Obtain S+, by performing PCA on high and low-resolution shape
     train_shape = transpose(vertcat(train_low_res_flow,train_high_res_flow));
-    coeff = pca(train_shape); % Rows of X correspond to observations and columns correspond to variables
+    coeff_shape = pca(train_shape); % Rows of X correspond to observations and columns correspond to variables
     train_text = transpose(vertcat(train_low_text,train_high_text));
-    coeff = pca(train_text)
+    coeff_text = pca(train_text)
+    %Choose # of base
+    M = 40;
+    eigen_shape = coeff_shape(:,1:M);
+    eigen_text = coeff_text(:,1:M);
     % Obtain T+, by performing PCA on high and low-resolution texture
     
     % Estimate a high-resolution shape from the given low-resolution shape by using S+
