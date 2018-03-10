@@ -80,18 +80,33 @@ function [] = resolution_enhacement()
         high_text = imwarp(train_high_res_images(:,:,i),flow_high);
         train_high_text(:,i-1) = reshape(high_text,[256*256,1]);
     end
-    % Obtain S+, by performing PCA on high and low-resolution shape
+    %train_low_res_flow;
+    %S_plus = zeros(133120,99);
+    %T_plus = zeros(66560,99);
+    
     train_shape = transpose(vertcat(train_low_res_flow,train_high_res_flow));
-    coeff_shape = pca(train_shape); % Rows of X correspond to observations and columns correspond to variables
+
+     % Rows of X correspond to observations and columns correspond to variables
     train_text = transpose(vertcat(train_low_text,train_high_text));
-    coeff_text = pca(train_text);
+    % Obtain T+, by performing PCA on high and low-resolution texture
+    % Obtain S+, by performing PCA on high and low-resolution shape
+    [coeff_text,s1,a_text] = pca(train_text);
+    [coeff_shape,s2,a_shape] = pca(train_shape);
     %Choose # of base
-    M = 40;
+    M = 50;
     eigen_shape = coeff_shape(:,1:M);
     eigen_text = coeff_text(:,1:M);
-    mean_shape = mean(train_shape);
-    mean_text = mean(train_text);
-    % Obtain T+, by performing PCA on high and low-resolution texture
+    eigen_text_a = a_text(1:M,1);
+    eigen_shape_a = a_shape(1:M,1);
+    mean_shape = mean(train_shape).';
+    mean_text = mean(train_text).';
+    
+    %S_plus = zeros(133120,M);
+    %T_plus = zeros(66560,M);
+    S_plus = mean_shape + eigen_shape * eigen_shape_a ;
+    T_plus = mean_text + eigen_text * eigen_text_a;
+    a_est = zeros(M,1);
+    
     
     % Estimate a high-resolution shape from the given low-resolution shape by using S+
     
@@ -105,7 +120,12 @@ end
 function [vector] = flow_zip(flow, size)
     A = reshape(flow.Vx,[size,1]);
     B = reshape(flow.Vy,[size,1]);
-    C = [A(:),B(:)].';
+    %C = [A(:),B(:)].';
+    id = size * 2;
+    C = zeros(id,1);
+    C(1:2:id,1) = A(:);
+    C(2:2:id,1) = B(:);
+    C = C.';
     vector = C(:); % zip x and y
 end
     
