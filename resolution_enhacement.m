@@ -152,9 +152,15 @@ end
 function [vector] = flow_zip(flow, size)
     A = reshape(flow.Vx,[size,1]);
     B = reshape(flow.Vy,[size,1]);
-    C = [A(:),B(:)].';
+    %C = [A(:),B(:)].';
+    id = size * 2;
+    C = zeros(id,1);
+    C(1:2:id,1) = A(:);
+    C(2:2:id,1) = B(:);
+    C = C.';
     vector = C(:); % zip x and y
 end
+
     
 % Improve the high-resolution shape/texture by recursive error back-projection.
 function [high_res_estimate] = recursive_error_back_projection(low_res_data, coeff_shape, coeff_text)
