@@ -67,85 +67,101 @@ function [] = resolution_enhacement()
     % Obtain textures of low-resolution images
     train_low_text = zeros(32*32,99);
     train_high_text = zeros(256*256,99);
+    test_low_text = zeros(32*32,99);
     for i = 2 : 100
         %index = (i-2)*1024+1;
-        x_l = reshape(train_low_res_flow(1:1024,i-1),[32,32]);
-        y_l = reshape(train_low_res_flow(1025:2048,i-1),[32,32]);
+        x_l = reshape(train_low_res_flow(1:2:2048,i-1),[32,32]);
+        y_l = reshape(train_low_res_flow(2:2:2048,i-1),[32,32]);
         flow_low = cat(3,x_l,y_l);
         low_text = imwarp(train_low_res_images(:,:,i),flow_low);
         train_low_text(:,i-1) = reshape(low_text,[32*32,1]);
-        x_h = reshape(train_high_res_flow(1:65536,i-1),[256,256]);
-        y_h = reshape(train_high_res_flow(65537:131072,i-1),[256,256]);
+        x_h = reshape(train_high_res_flow(1:2:131072,i-1),[256,256]);
+        y_h = reshape(train_high_res_flow(2:2:131072,i-1),[256,256]);
         flow_high = cat(3,x_h,y_h);
         high_text = imwarp(train_high_res_images(:,:,i),flow_high);
         train_high_text(:,i-1) = reshape(high_text,[256*256,1]);
+        
+        x_l = reshape(test_low_res_flow(1:2:2048,i-1),[32,32]);
+        y_l = reshape(test_low_res_flow(2:2:2048,i-1),[32,32]);
+        flow_low = cat(3,x_l,y_l);
+        low_text = imwarp(test_low_res_images(:,:,i),flow_low);
+        test_low_text(:,i-1) = reshape(low_text,[32*32,1]);
     end
-    %train_low_res_flow;
-    %S_plus = zeros(133120,99);
-    %T_plus = zeros(66560,99);
     
-    train_shape = transpose(vertcat(train_low_res_flow,train_high_res_flow));
-
-     % Rows of X correspond to observations and columns correspond to variables
-    train_text = transpose(vertcat(train_low_text,train_high_text));
-    % Obtain T+, by performing PCA on high and low-resolution texture
     % Obtain S+, by performing PCA on high and low-resolution shape
-    [coeff_text,s1,a_text] = pca(train_text);
-    [coeff_shape,s2,a_shape] = pca(train_shape);
-    %Choose # of base
-    M = 50;
-    eigen_shape = coeff_shape(:,1:M);
-    eigen_text = coeff_text(:,1:M);
-    eigen_text_a = a_text(1:M,1);
-    eigen_shape_a = a_shape(1:M,1);
-    mean_shape = mean(train_shape).';
-    mean_text = mean(train_text).';
-    
-    %S_plus = zeros(133120,M);
-    %T_plus = zeros(66560,M);
-    S_plus = mean_shape + eigen_shape * eigen_shape_a ;
-    T_plus = mean_text + eigen_text * eigen_text_a;
-    a_est = zeros(M,1);
-    
+    % Obtain T+, by performing PCA on high and low-resolution texture
+    train_shape = transpose(vertcat(train_low_res_flow,train_high_res_flow));
+    coeff_shape = pca(train_shape); % Rows of X correspond to observations and columns correspond to variables
+    train_text = transpose(vertcat(train_low_text,train_high_text));
+    coeff_text = pca(train_text);
+
+    mean_shape = mean(train_shape);
+    mean_text = mean(train_text);
     
     % Estimate a high-resolution shape from the given low-resolution shape by using S+
+    % Estimate a high-resolution texture from the given low-resolution texture by using T+
     
-    % Estimate a high-resolution texture from the given low-resolution texture by using S+
+    test_low_shape = test_low_res_flow - transpose(mean_shape(1:2048));
+    test_low_texture = test_low_text - transpose(mean_text(1:1024));
+    
+    test_high_shape = nan(131072, 99);
+    test_high_texture = nan(65536, 99);
+    for i=1:99
+        test_high_shape(:,i) = recursive_error_back_projection(test_low_shape(:,i), coeff_shape, coeff_text);
+        test_high_texture(:,i) = recursive_error_back_projection(test_low_texture(:,i), coeff_shape, coeff_text);
+    end
+    
+%     train_low_eig_shape = coeff_shape(1:2048,:);
+%     alpha_shape = inv(transpose(train_low_eig_shape) * train_low_eig_shape) * transpose(train_low_eig_shape) * test_low_shape;
+%     train_low_eig_text = coeff_text(1:1024,:);
+%     alpha_text = inv(transpose(train_low_eig_text) * train_low_eig_text) * transpose(train_low_eig_text) * test_low_texture;
+%     
+%     test_high_shape = nan(131072,99);
+%     for i=1:99
+%         answer = zeros(131072,1);
+%         for k=1:98
+%             answer = answer + alpha_shape(k,i) * coeff_shape(2049:133120,k);
+%         end
+%         test_high_shape(:,i) = answer;
+%     end
+%     test_high_texture = nan(65536,99);
+%     for i=1:99
+%         answer = zeros(65536,1);
+%         for k=1:98
+%             answer = answer + alpha_text(k,i) * coeff_text(1025:66560,k);
+%         end
+%         test_high_texture(:,i) = answer;
+%     end
 
     % Synthesize a high-resolution facial image by forward warping the estimated texture with the estimated shape. 
-
+    
 end
 
 % Zip X and Y as a vector like how they want in S+ from two displacement matrices
 function [vector] = flow_zip(flow, size)
     A = reshape(flow.Vx,[size,1]);
     B = reshape(flow.Vy,[size,1]);
-    %C = [A(:),B(:)].';
-    id = size * 2;
-    C = zeros(id,1);
-    C(1:2:id,1) = A(:);
-    C(2:2:id,1) = B(:);
-    C = C.';
+    C = [A(:),B(:)].';
     vector = C(:); % zip x and y
 end
     
 % Improve the high-resolution shape/texture by recursive error back-projection.
-function [high_res_estimate] = recursive_error_back_projection(low_res_data, S)
+function [high_res_estimate] = recursive_error_back_projection(low_res_data, coeff_shape, coeff_text)
     T1 = 1;
     T2 = 1;
     T = 10;
     t = 1;
-    w = 1;
+    w = 0.5;
     prevdistance = 0;
-%     high_res_estimate = 
-    low_res_estimate = imresize(high_res_estimate, [32,32], 'method', 'bicubic');
-    distance = imabsdiff(low_res_estimate, high_res_estimate);
+    high_res_estimate = estimate_shape_or_texture(low_res_data, coeff_shape, coeff_text);
+    low_res_estimate = downsample(high_res_estimate,64, 32);
+    distance = norm(low_res_estimate - low_res_data);
     while (distance >= T1 || abs(prevdistance - distance) >= T2)
         prevdistance = distance;
         low_res_error = low_res_data - low_res_estimate;
-%         high_res_estimate = high_res_estimate + w * 
-        low_res_estimate = imresize(high_res_estimate, [32,32], 'method', 'bicubic');
-        distance = imabsdiff(low_res_estimate, high_res_estimate);
+        high_res_estimate = high_res_estimate + w * estimate_shape_or_texture(low_res_error, coeff_shape, coeff_text);
+        low_res_estimate = downsample(high_res_estimate,64, 32);
+        distance = norm(low_res_estimate - low_res_data);
         if (t >= T) 
             break
         end
@@ -153,4 +169,26 @@ function [high_res_estimate] = recursive_error_back_projection(low_res_data, S)
     end
 end
     
-    
+function [high_res_estimate] = estimate_shape_or_texture(low_res_data, coeff_shape, coeff_text)
+    if size(low_res_data, 1) == 2048
+        train_low_eig_shape = coeff_shape(1:2048,:);
+        alpha_shape = inv(transpose(train_low_eig_shape) * train_low_eig_shape) * transpose(train_low_eig_shape) * low_res_data;
+        
+        high_res_estimate = nan(131072, 1);
+        answer = zeros(131072, 1);
+        for k=1:98
+            answer = answer + alpha_shape(k) * coeff_shape(2049:133120,k);
+        end
+        high_res_estimate(:) = answer;
+    else
+        train_low_eig_text = coeff_text(1:1024,:);
+        alpha_text = inv(transpose(train_low_eig_text) * train_low_eig_text) * transpose(train_low_eig_text) * low_res_data;
+
+        high_res_estimate = nan(65536, 1);
+        answer = zeros(65536, 1);
+        for k=1:98
+            answer = answer + alpha_text(k) * coeff_text(1025:66560,k);
+        end
+        high_res_estimate(:) = answer;
+    end
+end
