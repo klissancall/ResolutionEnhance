@@ -1,6 +1,6 @@
 % Author: Kevin Huynh, Xinyu Wang
 
-function [] = re_en() 
+function [] = resolution_enhacement() 
 
     % Load the faces in grayscale
     face_dir = 'FacesDatabase/faces/jpg/';
