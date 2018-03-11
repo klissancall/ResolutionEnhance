@@ -107,8 +107,8 @@ function [] = re_en()
     test_high_shape = nan(131072, 99);
     test_high_texture = nan(65536, 99);
     for i=1:99
-        test_high_shape(:,i) = recursive_error_back_projection(test_low_shape(:,i), coeff_shape, coeff_text);
-        test_high_texture(:,i) = recursive_error_back_projection(test_low_texture(:,i), coeff_shape, coeff_text);
+        test_high_shape(:,i) = recursive_error_back_projection(test_low_shape(:,i), coeff_shape, coeff_text, mean_shape, mean_text);
+        test_high_texture(:,i) = recursive_error_back_projection(test_low_texture(:,i), coeff_shape, coeff_text, mean_shape, mean_text);
     end
     
 %     train_low_eig_shape = coeff_shape(1:2048,:);
@@ -157,20 +157,20 @@ function [vector] = flow_zip(flow, size)
 end
     
 % Improve the high-resolution shape/texture by recursive error back-projection.
-function [high_res_estimate] = recursive_error_back_projection(low_res_data, coeff_shape, coeff_text)
+function [high_res_estimate] = recursive_error_back_projection(low_res_data, coeff_shape, coeff_text, mean_shape, mean_text)
     T1 = 1;
     T2 = 1;
     T = 10;
     t = 1;
     w = 0.5;
     prevdistance = 0;
-    high_res_estimate = estimate_shape_or_texture(low_res_data, coeff_shape, coeff_text);
+    high_res_estimate = estimate_shape_or_texture(low_res_data, coeff_shape, coeff_text, mean_shape, mean_text);
     low_res_estimate = downsample(high_res_estimate,64, 32);
     distance = norm(low_res_estimate - low_res_data);
     while (distance >= T1 || abs(prevdistance - distance) >= T2)
         prevdistance = distance;
         low_res_error = low_res_data - low_res_estimate;
-        high_res_estimate = high_res_estimate + w * estimate_shape_or_texture(low_res_error, coeff_shape, coeff_text);
+        high_res_estimate = high_res_estimate + w * estimate_shape_or_texture(low_res_error, coeff_shape, coeff_text, mean_shape, mean_text);
         low_res_estimate = downsample(high_res_estimate,64, 32);
         distance = norm(low_res_estimate - low_res_data);
         if (t >= T) 
@@ -180,8 +180,9 @@ function [high_res_estimate] = recursive_error_back_projection(low_res_data, coe
     end
 end
     
-function [high_res_estimate] = estimate_shape_or_texture(low_res_data, coeff_shape, coeff_text)
+function [high_res_estimate] = estimate_shape_or_texture(low_res_data, coeff_shape, coeff_text, mean_shape, mean_text)
     if size(low_res_data, 1) == 2048
+        low_res_data = low_res_data - transpose(mean_shape(1:2048));
         train_low_eig_shape = coeff_shape(1:2048,:);
         alpha_shape = inv(transpose(train_low_eig_shape) * train_low_eig_shape) * transpose(train_low_eig_shape) * low_res_data;
         
@@ -190,8 +191,9 @@ function [high_res_estimate] = estimate_shape_or_texture(low_res_data, coeff_sha
         for k=1:98
             answer = answer + alpha_shape(k) * coeff_shape(2049:133120,k);
         end
-        high_res_estimate(:) = answer;
+        high_res_estimate(:) = transpose(mean_shape(2049:end)) + answer;
     else
+        low_res_data = low_res_data - transpose(mean_text(1:1024));
         train_low_eig_text = coeff_text(1:1024,:);
         alpha_text = inv(transpose(train_low_eig_text) * train_low_eig_text) * transpose(train_low_eig_text) * low_res_data;
 
@@ -200,6 +202,6 @@ function [high_res_estimate] = estimate_shape_or_texture(low_res_data, coeff_sha
         for k=1:98
             answer = answer + alpha_text(k) * coeff_text(1025:66560,k);
         end
-        high_res_estimate(:) = answer;
+        high_res_estimate(:) = transpose(mean_text(1025:end)) + answer;
     end
 end
