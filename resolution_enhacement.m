@@ -40,24 +40,33 @@ function [] = resolution_enhacement()
     test_low_res_images = low_res_images(:,:,indexToGroup2);
     
     % Obtain shape of high-resolution training images using optical flow
-    opticFlow = opticalFlowFarneback;   
+    opticFlow = opticalFlowLKDoG; 
     train_high_res_ref = train_high_res_images(:,:,1);
     train_high_res_flow = nan(131072,99);
     for i=2:100
+        reset(opticFlow);
+%         estimateFlow(opticFlow,train_high_res_ref);
+%         flow = estimateFlow(opticFlow,train_high_res_images(:,:,i));
         estimateFlow(opticFlow,train_high_res_images(:,:,i));
         flow = estimateFlow(opticFlow,train_high_res_ref);
         train_high_res_flow(:, i-1) = flow_zip(flow, 65536);
     end
     
     % Obtain shape of low-resolution images using optical flow
-    opticFlow = opticalFlowFarneback;   
+    opticFlow = opticalFlowLKDoG;
     train_low_res_ref = train_low_res_images(:,:,1);
     train_low_res_flow = nan(2048,99);
     test_low_res_flow = nan(2048,99);
     for i=2:100
+        reset(opticFlow);
+%         estimateFlow(opticFlow,train_low_res_ref);
+%         flow = estimateFlow(opticFlow,train_low_res_images(:,:,i));
         estimateFlow(opticFlow,train_low_res_images(:,:,i));
         flow = estimateFlow(opticFlow,train_low_res_ref);
         train_low_res_flow(:, i-1) = flow_zip(flow, 1024);
+        reset(opticFlow);
+%         estimateFlow(opticFlow,train_low_res_ref);
+%         flow = estimateFlow(opticFlow,test_low_res_images(:,:,i));
         estimateFlow(opticFlow,test_low_res_images(:,:,i));
         flow = estimateFlow(opticFlow,train_low_res_ref);
         test_low_res_flow(:, i-1) = flow_zip(flow, 1024);
@@ -79,9 +88,8 @@ function [] = resolution_enhacement()
         y_h = reshape(train_high_res_flow(2:2:131072,i-1),[256,256]);
         flow_high = cat(3,x_h,y_h);
         high_text = imwarp(train_high_res_images(:,:,i),flow_high);
-%         imshow(high_text, [])
-        train_high_text(:,i-1) = reshape(high_text,[256*256,1]);
-        
+%         imshowpair(high_text, train_high_res_images(:,:,i), 'montage')
+        train_high_text(:,i-1) = reshape(high_text,[256*256,1]);        
         x_l = reshape(test_low_res_flow(1:2:2048,i-1),[32,32]);
         y_l = reshape(test_low_res_flow(2:2:2048,i-1),[32,32]);
         flow_low = cat(3,x_l,y_l);
@@ -95,7 +103,6 @@ function [] = resolution_enhacement()
     coeff_shape = pca(train_shape); % Rows of X correspond to observations and columns correspond to variables
     train_text = transpose(vertcat(train_low_text,train_high_text));
     coeff_text = pca(train_text);
-
     mean_shape = mean(train_shape);
     mean_text = mean(train_text);
     
@@ -146,9 +153,10 @@ function [] = resolution_enhacement()
         h_text = reshape(test_high_texture(:,i),[256,256]);
         imshow(h_text, []);
         re_high_res_estimate(:,:,i) = imwarp(h_text,flow_high);
+%         imshow(re_high_res_estimate(:,:,i), []);
+%         imshowpair(re_high_res_estimate(:,:,i), test_high_res_images(:,:,i), 'montage')
     end
-    imshow(re_high_res_estimate(:,:,1), []);
-    re_high_res_estimate(:,:,1)
+%     imshow(re_high_res_estimate(:,:,1), []);
     
 end
 
@@ -172,29 +180,29 @@ function [high_res_estimate] = recursive_error_back_projection(low_res_data, coe
 %     T2 = 1;
 %     T = 10;
 %     t = 1;
-%     w = 0.5;
+%     w = 0.001;
 %     prevdistance = 0;
     high_res_estimate = estimate_shape_or_texture(low_res_data, coeff_shape, coeff_text, mean_shape, mean_text);
-%     low_res_estimate = downsample(high_res_estimate,64, 32);
+%     low_res_estimate = downsample(high_res_estimate,64, 0);
 %     distance = norm(low_res_estimate - low_res_data);
 %     while (distance >= T1 || abs(prevdistance - distance) >= T2)
 %         prevdistance = distance;
 %         low_res_error = low_res_data - low_res_estimate;
 %         high_res_estimate = high_res_estimate + w * estimate_shape_or_texture(low_res_error, coeff_shape, coeff_text, mean_shape, mean_text);
-%         low_res_estimate = downsample(high_res_estimate,64, 32);
+%         low_res_estimate = downsample(high_res_estimate,64, 0);
 %         distance = norm(low_res_estimate - low_res_data);
 %         if (t >= T) 
 %             break
 %         end
 %         t = t + 1;
-%     end
+%    end
 end
     
 function [high_res_estimate] = estimate_shape_or_texture(low_res_data, coeff_shape, coeff_text, mean_shape, mean_text)
     % Shape
     if size(low_res_data, 1) == 2048
         train_low_eig_shape = coeff_shape(1:2048,:);
-        alpha_shape = (transpose(train_low_eig_shape) * train_low_eig_shape) \ (transpose(train_low_eig_shape) * low_res_data);
+        alpha_shape = inv(transpose(train_low_eig_shape) * train_low_eig_shape) * transpose(train_low_eig_shape) * low_res_data;
         
 %         alpha_shape = inv(transpose(train_low_eig_shape) * train_low_eig_shape) * transpose(train_low_eig_shape) * low_res_data;
         
@@ -208,7 +216,7 @@ function [high_res_estimate] = estimate_shape_or_texture(low_res_data, coeff_sha
     % Texture
     else
         train_low_eig_text = coeff_text(1:1024,:);
-        alpha_text = (transpose(train_low_eig_text) * train_low_eig_text) \ (transpose(train_low_eig_text) * low_res_data);
+        alpha_text = inv(transpose(train_low_eig_text) * train_low_eig_text) * transpose(train_low_eig_text) * low_res_data;
         
 %         alpha_text = inv(transpose(train_low_eig_text) * train_low_eig_text) * transpose(train_low_eig_text) * low_res_data;
 
