@@ -1,6 +1,6 @@
 % Author: Kevin Huynh, Xinyu Wang
 
-function [] = resolution_enhacement() 
+function [] = re_en() 
 
     % Load the faces in grayscale
     face_dir = 'FacesDatabase/faces/jpg/';
@@ -134,6 +134,17 @@ function [] = resolution_enhacement()
 %     end
 
     % Synthesize a high-resolution facial image by forward warping the estimated texture with the estimated shape. 
+    re_high_texture = zeros(256,256,99);
+    for i = 1 : 99
+        x_h = reshape(test_high_shape(1:2:131072,i),[256,256]);
+        y_h = reshape(test_high_shape(2:2:131072,i),[256,256]);
+        flow_high = cat(3,x_h,y_h);
+        h_text = reshape(test_high_texture(:,i),[256,256]);
+        high_text = imwarp(h_text,flow_high);
+        re_high_texture(:,:,i) = reshape(high_text,[256,256,1]);
+    end
+    figure(1)
+    imshow(re_high_texture(:,:,1));
     
 end
 
