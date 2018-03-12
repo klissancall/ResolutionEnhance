@@ -49,6 +49,7 @@ function [] = resolution_enhacement()
     opticFlow = opticalFlowLKDoG; 
     train_high_res_ref = train_high_res_images(:,:,1);
     train_high_res_flow = nan(131072,99);
+    test_high_res_flow = nan(131072,99);
     for i=2:100
         reset(opticFlow);
 %         estimateFlow(opticFlow,train_high_res_ref);
@@ -56,6 +57,12 @@ function [] = resolution_enhacement()
         estimateFlow(opticFlow,train_high_res_images(:,:,i));
         flow = estimateFlow(opticFlow,train_high_res_ref);
         train_high_res_flow(:, i-1) = flow_zip(flow, 65536);
+        reset(opticFlow);
+%         estimateFlow(opticFlow,train_high_res_ref);
+%         flow = estimateFlow(opticFlow,test_high_res_images(:,:,i));
+        estimateFlow(opticFlow,test_high_res_images(:,:,i));
+        flow = estimateFlow(opticFlow,train_high_res_ref);
+        test_high_res_flow(:, i-1) = flow_zip(flow, 65536);
     end
     
     % Obtain shape of low-resolution images using optical flow
@@ -82,6 +89,7 @@ function [] = resolution_enhacement()
     % Obtain textures of low-resolution images
     train_low_text = zeros(32*32,99);
     train_high_text = zeros(256*256,99);
+    test_high_text = zeros(256*256,99);
     test_low_text = zeros(32*32,99);
     for i = 2 : 100
         %index = (i-2)*1024+1;
@@ -101,6 +109,13 @@ function [] = resolution_enhacement()
         flow_low = cat(3,x_l,y_l);
         low_text = imwarp(test_low_res_images(:,:,i),flow_low);
         test_low_text(:,i-1) = reshape(low_text,[32*32,1]);
+        x_h = reshape(test_high_res_flow(1:2:131072,i-1),[256,256]);
+        y_h = reshape(test_high_res_flow(2:2:131072,i-1),[256,256]);
+        flow_high = cat(3,x_h,y_h);
+        high_text = imwarp(test_high_res_images(:,:,i),flow_high);
+%         imshowpair(high_text, train_high_res_images(:,:,i), 'montage')
+        test_high_text(:,i-1) = reshape(high_text,[256*256,1]);       
+        
     end
     
     % Obtain S+, by performing PCA on high and low-resolution shape
@@ -139,9 +154,20 @@ function [] = resolution_enhacement()
         re_high_res_estimate(:,:,i) = imwarp(h_text,flow_high);
 %         imshow(re_high_res_estimate(:,:,i), []);
         imshowpair(re_high_res_estimate(:,:,i), test_high_res_images(:,:,i), 'montage');
+        truesize;
         saveas(gcf,sprintf('FacesDatabase/results/jpg/high_res_estimate_%d.jpg', i));
     end
 %     imshow(re_high_res_estimate(:,:,1), []);
+
+    % Calculate mean error for shape, texture, and image
+    orig_x_h = test_high_res_flow(1:2:131072,:);
+    orig_y_h = test_high_res_flow(2:2:131072,:);
+    est_x_h = test_high_shape(1:2:131072,:);
+    est_y_h = test_high_shape(2:2:131072,:);
+    mean_shape_error_x = mean(mean(abs(orig_x_h - est_x_h)))
+    mean_shape_error_y = mean(mean(abs(orig_y_h - est_y_h)))
+    mean_texture_error = mean(mean(abs(test_high_texture - test_high_text)))
+    mean_image_error = mean(mean(abs(reshape(re_high_res_estimate, [65536,99]) - reshape(test_high_res_images(:,:,2:100), [65536,99]))))
     
 end
 
