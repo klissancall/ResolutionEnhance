@@ -2,8 +2,4 @@
 
 Dependency:
 
-opencv
-
-numpy
-
-matplotlib
+MatLab

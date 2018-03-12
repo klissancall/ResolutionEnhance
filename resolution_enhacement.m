@@ -26,7 +26,7 @@ function [] = resolution_enhacement()
     low_res_images = nan(32,32,200);
     for i=1:200
         low_res_images(:,:,i) = imresize(high_res_images(:,:,i), [32,32], 'method', 'bicubic');
-%         imshow(low_res_images(:,:,i), []);
+        imshow(low_res_images(:,:,i), []);
     end
     
     % Split data into 100 training and 100 testing
@@ -38,6 +38,12 @@ function [] = resolution_enhacement()
     test_high_res_images = high_res_images(:,:,indexToGroup2);
     train_low_res_images = low_res_images(:,:,indexToGroup1);
     test_low_res_images = low_res_images(:,:,indexToGroup2);
+    
+    mkdir('FacesDatabase/results/jpg/');
+    for i=1:99
+        imshow(test_low_res_images(:,:,i), []);
+        saveas(gcf,sprintf('FacesDatabase/results/jpg/low_res_%d.jpg', i));
+    end
     
     % Obtain shape of high-resolution training images using optical flow
     opticFlow = opticalFlowLKDoG; 
@@ -121,28 +127,6 @@ function [] = resolution_enhacement()
         test_high_shape(:,i) = recursive_error_back_projection(test_low_shape(:,i), coeff_shape, coeff_text, mean_shape, mean_text);
         test_high_texture(:,i) = recursive_error_back_projection(test_low_texture(:,i), coeff_shape, coeff_text, mean_shape, mean_text);
     end
-    
-%     train_low_eig_shape = coeff_shape(1:2048,:);
-%     alpha_shape = inv(transpose(train_low_eig_shape) * train_low_eig_shape) * transpose(train_low_eig_shape) * test_low_shape;
-%     train_low_eig_text = coeff_text(1:1024,:);
-%     alpha_text = inv(transpose(train_low_eig_text) * train_low_eig_text) * transpose(train_low_eig_text) * test_low_texture;
-%     
-%     test_high_shape = nan(131072,99);
-%     for i=1:99
-%         answer = zeros(131072,1);
-%         for k=1:98
-%             answer = answer + alpha_shape(k,i) * coeff_shape(2049:133120,k);
-%         end
-%         test_high_shape(:,i) = answer;
-%     end
-%     test_high_texture = nan(65536,99);
-%     for i=1:99
-%         answer = zeros(65536,1);
-%         for k=1:98
-%             answer = answer + alpha_text(k,i) * coeff_text(1025:66560,k);
-%         end
-%         test_high_texture(:,i) = answer;
-%     end
 
     % Synthesize a high-resolution facial image by forward warping the estimated texture with the estimated shape. 
     re_high_res_estimate = zeros(256,256,99);
@@ -154,7 +138,8 @@ function [] = resolution_enhacement()
         imshow(h_text, []);
         re_high_res_estimate(:,:,i) = imwarp(h_text,flow_high);
 %         imshow(re_high_res_estimate(:,:,i), []);
-%         imshowpair(re_high_res_estimate(:,:,i), test_high_res_images(:,:,i), 'montage')
+        imshowpair(re_high_res_estimate(:,:,i), test_high_res_images(:,:,i), 'montage');
+        saveas(gcf,sprintf('FacesDatabase/results/jpg/high_res_estimate_%d.jpg', i));
     end
 %     imshow(re_high_res_estimate(:,:,1), []);
     
@@ -176,26 +161,26 @@ end
     
 % Improve the high-resolution shape/texture by recursive error back-projection.
 function [high_res_estimate] = recursive_error_back_projection(low_res_data, coeff_shape, coeff_text, mean_shape, mean_text)
-%     T1 = 1;
-%     T2 = 1;
-%     T = 10;
-%     t = 1;
-%     w = 0.001;
-%     prevdistance = 0;
+    T1 = 1;
+    T2 = 1;
+    T = 10;
+    t = 1;
+    w = 0.001;
+    prevdistance = 0;
     high_res_estimate = estimate_shape_or_texture(low_res_data, coeff_shape, coeff_text, mean_shape, mean_text);
-%     low_res_estimate = downsample(high_res_estimate,64, 0);
-%     distance = norm(low_res_estimate - low_res_data);
-%     while (distance >= T1 || abs(prevdistance - distance) >= T2)
-%         prevdistance = distance;
-%         low_res_error = low_res_data - low_res_estimate;
-%         high_res_estimate = high_res_estimate + w * estimate_shape_or_texture(low_res_error, coeff_shape, coeff_text, mean_shape, mean_text);
-%         low_res_estimate = downsample(high_res_estimate,64, 0);
-%         distance = norm(low_res_estimate - low_res_data);
-%         if (t >= T) 
-%             break
-%         end
-%         t = t + 1;
-%    end
+    low_res_estimate = downsample(high_res_estimate,64, 0);
+    distance = norm(low_res_estimate - low_res_data);
+    while (distance >= T1 || abs(prevdistance - distance) >= T2)
+        prevdistance = distance;
+        low_res_error = low_res_data - low_res_estimate;
+        high_res_estimate = high_res_estimate + w * estimate_shape_or_texture(low_res_error, coeff_shape, coeff_text, mean_shape, mean_text);
+        low_res_estimate = downsample(high_res_estimate,64, 0);
+        distance = norm(low_res_estimate - low_res_data);
+        if (t >= T) 
+            break
+        end
+        t = t + 1;
+   end
 end
     
 function [high_res_estimate] = estimate_shape_or_texture(low_res_data, coeff_shape, coeff_text, mean_shape, mean_text)
