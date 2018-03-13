@@ -180,7 +180,6 @@ function [vector] = flow_zip(flow, size)
     C = zeros(id,1);
     C(1:2:id,1) = A(:);
     C(2:2:id,1) = B(:);
-    C = C.';
     vector = C(:); % zip x and y
 end
 
