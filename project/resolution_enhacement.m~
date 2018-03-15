@@ -75,7 +75,7 @@ function [] = resolution_enhacement()
         end
 
         % Obtain shape of high-resolution training images using optical flow
-        opticFlow = opticalFlowLKDoG('NoiseThreshold', 8);
+        opticFlow = opticalFlowLKDoG('NoiseThreshold', 0);
         train_high_res_ref = train_high_res_images(:,:,1);
 %         train_high_res_ref = reshape(transpose(mean(transpose(reshape(train_high_res_images(:,:,:), [65536,split_size])))), [256,256,1]);
         train_high_res_flow = nan(131072,size_minus_ref);
@@ -107,8 +107,8 @@ function [] = resolution_enhacement()
     %         flow = estimateFlow(opticFlow,train_low_res_images(:,:,i));
             estimateFlow(opticFlow,train_low_res_images(:,:,i));
             flow = estimateFlow(opticFlow,train_low_res_ref);
-%             train_low_res_flow(:, i-1) = downsample(train_high_res_flow(:, i-1),64, 0);
-            train_low_res_flow(:, i-1) = flow_zip(flow, 1024);
+            train_low_res_flow(:, i-1) = downsample(train_high_res_flow(:, i-1),64, 0);
+%             train_low_res_flow(:, i-1) = flow_zip(flow, 1024);
             reset(opticFlow);
     %         estimateFlow(opticFlow,train_low_res_ref);
     %         flow = estimateFlow(opticFlow,test_low_res_images(:,:,i));
