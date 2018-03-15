@@ -107,8 +107,8 @@ function [] = resolution_enhacement()
     %         flow = estimateFlow(opticFlow,train_low_res_images(:,:,i));
             estimateFlow(opticFlow,train_low_res_images(:,:,i));
             flow = estimateFlow(opticFlow,train_low_res_ref);
-            train_low_res_flow(:, i-1) = downsample(train_high_res_flow(:, i-1),64, 0);
-%             train_low_res_flow(:, i-1) = flow_zip(flow, 1024);
+            train_low_res_flow(:, i-1) = downsample(tra_res_estimate,64, 0);
+            train_low_res_flow(:, i-1) = flow_zip(flow, 1024);
             reset(opticFlow);
     %         estimateFlow(opticFlow,train_low_res_ref);
     %         flow = estimateFlow(opticFlow,test_low_res_images(:,:,i));
