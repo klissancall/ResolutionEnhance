@@ -2,173 +2,208 @@
 
 function [] = resolution_enhacement() 
 
-    % Load the faces in grayscale
-    face_dir = 'FacesDatabase/faces/jpg/';
-    high_res_images = nan(256,256,200);
-    for i=1:100
-        if i < 10
-            str=strcat('MPIf00',sprintf('%01d_0r.jpg', i));
-            str2=strcat('MPIm00',sprintf('%01d_0r.jpg', i));
-        elseif i < 100
-            str=strcat('MPIf0',sprintf('%01d_0r.jpg', i));
-            str2=strcat('MPIm0',sprintf('%01d_0r.jpg', i));
+    for dataset=1:2
+        if dataset == 1
+            data_set_size = 200;
+            split_size = 100;
+            size_minus_ref = split_size - 1;
+            % Load the faces in grayscale
+            face_dir = 'FacesDatabase/faces/jpg/';
+            high_res_images = nan(256,256,data_set_size);
+            for i=1:split_size
+                if i < 10
+                    str=strcat('MPIf00',sprintf('%01d_0r.jpg', i));
+                    str2=strcat('MPIm00',sprintf('%01d_0r.jpg', i));
+                elseif i < split_size
+                    str=strcat('MPIf0',sprintf('%01d_0r.jpg', i));
+                    str2=strcat('MPIm0',sprintf('%01d_0r.jpg', i));
+                else
+                    str=strcat('MPIf',sprintf('%01d_0r.jpg', i));
+                    str2=strcat('MPIm',sprintf('%01d_0r.jpg', i));
+                end
+                high_res_images(:,:,(2*i)-1) = im2uint8(rgb2gray(imread(strcat(face_dir,str))));
+        %         imshow(high_res_images(:,:,(2*i)-1), []);
+                high_res_images(:,:,(2*i)) = im2uint8(rgb2gray(imread(strcat(face_dir,str2))));
+        %         imshow(high_res_images(:,:,(2*i)), []);
+            end
         else
-            str=strcat('MPIf',sprintf('%01d_0r.jpg', i));
-            str2=strcat('MPIm',sprintf('%01d_0r.jpg', i));
+            data_set_size = 176;
+            split_size = 88;
+            size_minus_ref = split_size - 1;
+            % Load the faces in grayscale
+            face_dir = 'FacesDatabase/second_dataset_faces/';
+            high_res_images = nan(256,256,176);
+            for i=1:177
+                str=sprintf('face%03d.bmp', i);
+                if i<103
+                    high_res_images(:,:,i) = im2uint8(imread(strcat(face_dir,str)));
+                elseif i==103
+                    continue
+                else
+                    high_res_images(:,:,i-1) = im2uint8(imread(strcat(face_dir,str)));
+                end
+        %         imshow(high_res_images(:,:,(2*i)-1), []);
+        %         imshow(high_res_images(:,:,(2*i)), []);
+            end
         end
-        high_res_images(:,:,(2*i)-1) = im2uint8(rgb2gray(imread(strcat(face_dir,str))));
-%         imshow(high_res_images(:,:,(2*i)-1), []);
-        high_res_images(:,:,(2*i)) = im2uint8(rgb2gray(imread(strcat(face_dir,str2))));
-%         imshow(high_res_images(:,:,(2*i)), []);
-    end
-    
-    % Obtain 32 x 32 low-resolution images using bicubic interpolation
-    low_res_images = nan(32,32,200);
-    for i=1:200
-        low_res_images(:,:,i) = imresize(high_res_images(:,:,i), [32,32], 'method', 'bicubic');
-        imshow(low_res_images(:,:,i), []);
-    end
-    
-    % Split data into 100 training and 100 testing
-    rng(10); % set random seed
-    idx = randperm(200);
-    indexToGroup1 = (idx<=100);
-    indexToGroup2 = (idx>100);
-    train_high_res_images = high_res_images(:,:,indexToGroup1);
-    test_high_res_images = high_res_images(:,:,indexToGroup2);
-    train_low_res_images = low_res_images(:,:,indexToGroup1);
-    test_low_res_images = low_res_images(:,:,indexToGroup2);
-    
-    mkdir('FacesDatabase/results/jpg/');
-    for i=1:99
-        imshow(test_low_res_images(:,:,i), []);
-        saveas(gcf,sprintf('FacesDatabase/results/jpg/low_res_%d.jpg', i));
-    end
-    
-    % Obtain shape of high-resolution training images using optical flow
-    opticFlow = opticalFlowLKDoG; 
-    train_high_res_ref = train_high_res_images(:,:,1);
-    train_high_res_flow = nan(131072,99);
-    test_high_res_flow = nan(131072,99);
-    for i=2:100
-        reset(opticFlow);
-%         estimateFlow(opticFlow,train_high_res_ref);
-%         flow = estimateFlow(opticFlow,train_high_res_images(:,:,i));
-        estimateFlow(opticFlow,train_high_res_images(:,:,i));
-        flow = estimateFlow(opticFlow,train_high_res_ref);
-        train_high_res_flow(:, i-1) = flow_zip(flow, 65536);
-        reset(opticFlow);
-%         estimateFlow(opticFlow,train_high_res_ref);
-%         flow = estimateFlow(opticFlow,test_high_res_images(:,:,i));
-        estimateFlow(opticFlow,test_high_res_images(:,:,i));
-        flow = estimateFlow(opticFlow,train_high_res_ref);
-        test_high_res_flow(:, i-1) = flow_zip(flow, 65536);
-    end
-    
-    % Obtain shape of low-resolution images using optical flow
-    opticFlow = opticalFlowLKDoG;
-    train_low_res_ref = train_low_res_images(:,:,1);
-    train_low_res_flow = nan(2048,99);
-    test_low_res_flow = nan(2048,99);
-    for i=2:100
-        reset(opticFlow);
-%         estimateFlow(opticFlow,train_low_res_ref);
-%         flow = estimateFlow(opticFlow,train_low_res_images(:,:,i));
-        estimateFlow(opticFlow,train_low_res_images(:,:,i));
-        flow = estimateFlow(opticFlow,train_low_res_ref);
-        train_low_res_flow(:, i-1) = flow_zip(flow, 1024);
-        reset(opticFlow);
-%         estimateFlow(opticFlow,train_low_res_ref);
-%         flow = estimateFlow(opticFlow,test_low_res_images(:,:,i));
-        estimateFlow(opticFlow,test_low_res_images(:,:,i));
-        flow = estimateFlow(opticFlow,train_low_res_ref);
-        test_low_res_flow(:, i-1) = flow_zip(flow, 1024);
-    end
-    
-    % Obtain textures of high-resolution images
-    % Obtain textures of low-resolution images
-    train_low_text = zeros(32*32,99);
-    train_high_text = zeros(256*256,99);
-    test_high_text = zeros(256*256,99);
-    test_low_text = zeros(32*32,99);
-    for i = 2 : 100
-        %index = (i-2)*1024+1;
-        x_l = reshape(train_low_res_flow(1:2:2048,i-1),[32,32]);
-        y_l = reshape(train_low_res_flow(2:2:2048,i-1),[32,32]);
-        flow_low = cat(3,x_l,y_l);
-        low_text = imwarp(train_low_res_images(:,:,i),flow_low);
-        train_low_text(:,i-1) = reshape(low_text,[32*32,1]);
-        x_h = reshape(train_high_res_flow(1:2:131072,i-1),[256,256]);
-        y_h = reshape(train_high_res_flow(2:2:131072,i-1),[256,256]);
-        flow_high = cat(3,x_h,y_h);
-        high_text = imwarp(train_high_res_images(:,:,i),flow_high);
-%         imshowpair(high_text, train_high_res_images(:,:,i), 'montage')
-        train_high_text(:,i-1) = reshape(high_text,[256*256,1]);        
-        x_l = reshape(test_low_res_flow(1:2:2048,i-1),[32,32]);
-        y_l = reshape(test_low_res_flow(2:2:2048,i-1),[32,32]);
-        flow_low = cat(3,x_l,y_l);
-        low_text = imwarp(test_low_res_images(:,:,i),flow_low);
-        test_low_text(:,i-1) = reshape(low_text,[32*32,1]);
-        x_h = reshape(test_high_res_flow(1:2:131072,i-1),[256,256]);
-        y_h = reshape(test_high_res_flow(2:2:131072,i-1),[256,256]);
-        flow_high = cat(3,x_h,y_h);
-        high_text = imwarp(test_high_res_images(:,:,i),flow_high);
-%         imshowpair(high_text, train_high_res_images(:,:,i), 'montage')
-        test_high_text(:,i-1) = reshape(high_text,[256*256,1]);       
-        
-    end
-    
-    % Obtain S+, by performing PCA on high and low-resolution shape
-    % Obtain T+, by performing PCA on high and low-resolution texture
-    train_shape = transpose(vertcat(train_low_res_flow,train_high_res_flow));
-    coeff_shape = pca(train_shape); % Rows of X correspond to observations and columns correspond to variables
-    train_text = transpose(vertcat(train_low_text,train_high_text));
-    coeff_text = pca(train_text);
-    mean_shape = mean(train_shape);
-    mean_text = mean(train_text);
-    
-    % Estimate a high-resolution shape from the given low-resolution shape by using S+
-    % Estimate a high-resolution texture from the given low-resolution texture by using T+
-  
-    
-    test_low_shape = test_low_res_flow;
-    test_low_texture = test_low_text;
-%     test_low_shape = test_low_res_flow - transpose(mean_shape(1:2048));
-%     test_low_texture = test_low_text - transpose(mean_text(1:1024));
-    
-    test_high_shape = nan(131072, 99);
-    test_high_texture = nan(65536, 99);
-    for i=1:99
-        test_high_shape(:,i) = recursive_error_back_projection(test_low_shape(:,i), coeff_shape, coeff_text, mean_shape, mean_text);
-        test_high_texture(:,i) = recursive_error_back_projection(test_low_texture(:,i), coeff_shape, coeff_text, mean_shape, mean_text);
-    end
 
-    % Synthesize a high-resolution facial image by forward warping the estimated texture with the estimated shape. 
-    re_high_res_estimate = zeros(256,256,99);
-    for i = 1 : 99
-        x_h = reshape(test_high_shape(1:2:131072,i),[256,256]);
-        y_h = reshape(test_high_shape(2:2:131072,i),[256,256]);
-        flow_high = cat(3,x_h,y_h);
-        h_text = reshape(test_high_texture(:,i),[256,256]);
-        imshow(h_text, []);
-        re_high_res_estimate(:,:,i) = imwarp(h_text,flow_high);
-%         imshow(re_high_res_estimate(:,:,i), []);
-        imshowpair(re_high_res_estimate(:,:,i), test_high_res_images(:,:,i), 'montage');
-        truesize;
-        saveas(gcf,sprintf('FacesDatabase/results/jpg/high_res_estimate_%d.jpg', i));
-    end
-%     imshow(re_high_res_estimate(:,:,1), []);
+        % Obtain 32 x 32 low-resolution images using bicubic interpolation
+        low_res_images = nan(32,32,data_set_size);
+        for i=1:data_set_size
+            low_res_images(:,:,i) = imresize(high_res_images(:,:,i), [32,32], 'method', 'bicubic');
+    %         imshow(low_res_images(:,:,i), []);
+        end
 
-    % Calculate mean error for shape, texture, and image
-    orig_x_h = test_high_res_flow(1:2:131072,:);
-    orig_y_h = test_high_res_flow(2:2:131072,:);
-    est_x_h = test_high_shape(1:2:131072,:);
-    est_y_h = test_high_shape(2:2:131072,:);
-    mean_shape_error_x = mean(mean(abs(orig_x_h - est_x_h)))
-    mean_shape_error_y = mean(mean(abs(orig_y_h - est_y_h)))
-    mean_texture_error = mean(mean(abs(test_high_texture - test_high_text)))
-    mean_image_error = mean(mean(abs(reshape(re_high_res_estimate, [65536,99]) - reshape(test_high_res_images(:,:,2:100), [65536,99]))))
-    
+        % Split data into split_size training and split_size testing
+        rng(9); % set random seed
+        idx = randperm(data_set_size);
+        indexToGroup1 = (idx<=split_size);
+        indexToGroup2 = (idx>split_size);
+        train_high_res_images = high_res_images(:,:,indexToGroup1);
+        train_low_res_images = low_res_images(:,:,indexToGroup1);
+        test_high_res_images = high_res_images(:,:,indexToGroup2);
+        test_low_res_images = low_res_images(:,:,indexToGroup2);  
+
+        mkdir('FacesDatabase/results/jpg/');
+        for i=1:size_minus_ref
+            imshow(test_low_res_images(:,:,i), []);
+            if dataset == 1
+                saveas(gcf,sprintf('FacesDatabase/results/jpg/low_res_%d.jpg', i));
+            else
+                saveas(gcf,sprintf('FacesDatabase/results/jpg/second_dataset_low_res_%d.jpg', i));
+            end
+        end
+
+        % Obtain shape of high-resolution training images using optical flow
+        opticFlow = opticalFlowLKDoG('NoiseThreshold', 8); 
+    %     train_high_res_ref = train_high_res_images(:,:,1);
+        train_high_res_ref = reshape(transpose(mean(transpose(reshape(train_high_res_images(:,:,:), [65536,split_size])))), [256,256,1]);
+        train_high_res_flow = nan(131072,size_minus_ref);
+        test_high_res_flow = nan(131072,size_minus_ref);
+        for i=2:split_size
+            reset(opticFlow);
+    %         estimateFlow(opticFlow,train_high_res_ref);
+    %         flow = estimateFlow(opticFlow,train_high_res_images(:,:,i));
+            estimateFlow(opticFlow,train_high_res_images(:,:,i));
+            flow = estimateFlow(opticFlow,train_high_res_ref);
+            train_high_res_flow(:, i-1) = flow_zip(flow, 65536);
+            reset(opticFlow);
+    %         estimateFlow(opticFlow,train_high_res_ref);
+    %         flow = estimateFlow(opticFlow,test_high_res_images(:,:,i));
+            estimateFlow(opticFlow,test_high_res_images(:,:,i));
+            flow = estimateFlow(opticFlow,train_high_res_ref);
+            test_high_res_flow(:, i-1) = flow_zip(flow, 65536);
+        end
+
+        % Obtain shape of low-resolution images using optical flow
+        opticFlow = opticalFlowLKDoG('NoiseThreshold', 8); 
+    %     train_low_res_ref = train_low_res_images(:,:,1);
+        train_low_res_ref = reshape(transpose(mean(transpose(reshape(train_low_res_images(:,:,:), [1024,split_size])))),[32,32,1]);
+        train_low_res_flow = nan(2048,size_minus_ref);
+        test_low_res_flow = nan(2048,size_minus_ref);
+        for i=2:split_size
+            reset(opticFlow);
+    %         estimateFlow(opticFlow,train_low_res_ref);
+    %         flow = estimateFlow(opticFlow,train_low_res_images(:,:,i));
+            estimateFlow(opticFlow,train_low_res_images(:,:,i));
+            flow = estimateFlow(opticFlow,train_low_res_ref);
+            train_low_res_flow(:, i-1) = flow_zip(flow, 1024);
+            reset(opticFlow);
+    %         estimateFlow(opticFlow,train_low_res_ref);
+    %         flow = estimateFlow(opticFlow,test_low_res_images(:,:,i));
+            estimateFlow(opticFlow,test_low_res_images(:,:,i));
+            flow = estimateFlow(opticFlow,train_low_res_ref);
+            test_low_res_flow(:, i-1) = flow_zip(flow, 1024);
+        end
+
+        % Obtain textures of high-resolution images
+        % Obtain textures of low-resolution images
+        train_low_text = zeros(32*32,size_minus_ref);
+        train_high_text = zeros(256*256,size_minus_ref);
+        test_high_text = zeros(256*256,size_minus_ref);
+        test_low_text = zeros(32*32,size_minus_ref);
+        for i = 2 : split_size
+            %index = (i-2)*1024+1;
+            x_l = reshape(train_low_res_flow(1:2:2048,i-1),[32,32]);
+            y_l = reshape(train_low_res_flow(2:2:2048,i-1),[32,32]);
+            flow_low = cat(3,x_l,y_l);
+            low_text = imwarp(train_low_res_images(:,:,i),flow_low);
+            train_low_text(:,i-1) = reshape(low_text,[32*32,1]);
+            x_h = reshape(train_high_res_flow(1:2:131072,i-1),[256,256]);
+            y_h = reshape(train_high_res_flow(2:2:131072,i-1),[256,256]);
+            flow_high = cat(3,x_h,y_h);
+            high_text = imwarp(train_high_res_images(:,:,i),flow_high);
+    %         imshowpair(high_text, train_high_res_images(:,:,i), 'montage')
+            train_high_text(:,i-1) = reshape(high_text,[256*256,1]);        
+            x_l = reshape(test_low_res_flow(1:2:2048,i-1),[32,32]);
+            y_l = reshape(test_low_res_flow(2:2:2048,i-1),[32,32]);
+            flow_low = cat(3,x_l,y_l);
+            low_text = imwarp(test_low_res_images(:,:,i),flow_low);
+            test_low_text(:,i-1) = reshape(low_text,[32*32,1]);
+            x_h = reshape(test_high_res_flow(1:2:131072,i-1),[256,256]);
+            y_h = reshape(test_high_res_flow(2:2:131072,i-1),[256,256]);
+            flow_high = cat(3,x_h,y_h);
+            high_text = imwarp(test_high_res_images(:,:,i),flow_high);
+    %         imshowpair(high_text, train_high_res_images(:,:,i), 'montage')
+            test_high_text(:,i-1) = reshape(high_text,[256*256,1]);       
+
+        end
+
+        % Obtain S+, by performing PCA on high and low-resolution shape
+        % Obtain T+, by performing PCA on high and low-resolution texture
+        train_shape = transpose(vertcat(train_low_res_flow,train_high_res_flow));
+        coeff_shape = pca(train_shape); % Rows of X correspond to observations and columns correspond to variables
+        train_text = transpose(vertcat(train_low_text,train_high_text));
+        coeff_text = pca(train_text);
+        mean_shape = mean(train_shape);
+        mean_text = mean(train_text);
+
+        % Estimate a high-resolution shape from the given low-resolution shape by using S+
+        % Estimate a high-resolution texture from the given low-resolution texture by using T+
+
+
+%         test_low_shape = test_low_res_flow;
+%         test_low_texture = test_low_text;
+        test_low_shape = test_low_res_flow - transpose(mean_shape(1:2048));
+        test_low_texture = test_low_text - transpose(mean_text(1:1024));
+
+        test_high_shape = nan(131072, size_minus_ref);
+        test_high_texture = nan(65536, size_minus_ref);
+        for i=1:size_minus_ref
+            test_high_shape(:,i) = recursive_error_back_projection(test_low_shape(:,i), coeff_shape, coeff_text, mean_shape, mean_text);
+            test_high_texture(:,i) = recursive_error_back_projection(test_low_texture(:,i), coeff_shape, coeff_text, mean_shape, mean_text);
+        end
+
+        % Synthesize a high-resolution facial image by forward warping the estimated texture with the estimated shape. 
+        re_high_res_estimate = zeros(256,256,size_minus_ref);
+        for i = 1 : size_minus_ref
+            x_h = reshape(test_high_shape(1:2:131072,i),[256,256]);
+            y_h = reshape(test_high_shape(2:2:131072,i),[256,256]);
+            flow_high = cat(3,x_h,y_h);
+            h_text = reshape(test_high_texture(:,i),[256,256]);
+    %         imshow(h_text, []);
+            re_high_res_estimate(:,:,i) = imwarp(h_text,flow_high);
+    %         imshow(re_high_res_estimate(:,:,i), []);
+            imshowpair(re_high_res_estimate(:,:,i), test_high_res_images(:,:,i), 'montage');
+            truesize;
+            if dataset == 1
+                saveas(gcf,sprintf('FacesDatabase/results/jpg/high_res_estimate_%d.jpg', i));
+            else
+                saveas(gcf,sprintf('FacesDatabase/results/jpg/second_dataset_high_res_estimate_%d.jpg', i));
+            end
+        end
+    %     imshow(re_high_res_estimate(:,:,1), []);
+
+        % Calculate mean error for shape, texture, and image
+        orig_x_h = test_high_res_flow(1:2:131072,:);
+        orig_y_h = test_high_res_flow(2:2:131072,:);
+        est_x_h = test_high_shape(1:2:131072,:);
+        est_y_h = test_high_shape(2:2:131072,:);
+        mean_shape_error_x = mean(mean(abs(orig_x_h - est_x_h)))
+        mean_shape_error_y = mean(mean(abs(orig_y_h - est_y_h)))
+        mean_texture_error = mean(mean(abs(test_high_texture - test_high_text)))
+        mean_image_error = mean(mean(abs(reshape(re_high_res_estimate, [65536,size_minus_ref]) - reshape(test_high_res_images(:,:,2:split_size), [65536,size_minus_ref]))))
+    end
 end
 
 % Zip X and Y as a vector like how they want in S+ from two displacement matrices
@@ -219,7 +254,7 @@ function [high_res_estimate] = estimate_shape_or_texture(low_res_data, coeff_sha
         
         high_res_estimate = nan(131072, 1);
         answer = zeros(131072, 1);
-        for k=1:98
+        for k=1:size(alpha_shape)
             answer = answer + alpha_shape(k) * coeff_shape(2049:end,k);
         end
 %         high_res_estimate(:) = answer;
@@ -233,7 +268,7 @@ function [high_res_estimate] = estimate_shape_or_texture(low_res_data, coeff_sha
 
         high_res_estimate = nan(65536, 1);
         answer = zeros(65536, 1);
-        for k=1:98
+        for k=1:size(alpha_text)
             answer = answer + alpha_text(k) * coeff_text(1025:end,k);
         end
 %        high_res_estimate(:) = answer;
