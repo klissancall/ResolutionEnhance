@@ -1,0 +1,87 @@
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+    
+    <HEAD>
+        <TITLE>Enhancing the Resolution of Low-Quality Images with an Example-Based Learning Approach</TITLE>
+        
+        <META http-equiv=Content-Type content="text/html; charset=iso-8859-1">
+            
+            <style type="text/css">
+                <!--
+                
+                .style4 {
+                    font-size: 16px
+                }
+            
+            .style13 {
+                color: #000066
+            }
+            
+            .style14 {
+                font-family: Arial, Helvetica, sans-serif
+            }
+            
+            .style19 {
+                font-size: 14;
+                color: #000000;
+            }
+            
+            .style20 {
+                font-family: Arial, Helvetica, sans-serif;
+                color: #000000;
+            }
+            
+            .style22 {
+                color: #000000
+            }
+            
+            .style23 {
+                font-family: Arial, Helvetica, sans-serif;
+                color: #000000;
+                font-size: 16;
+            }
+            
+            .style24 {
+                font-size: 16;
+            }
+            
+            @media print {
+                .no-print, .no-print * {
+                    display: none !important;
+                }
+            }
+            
+            -->
+                </style>
+            </HEAD>
+    
+    <BODY background="Nabkgnd.jpg">
+        <DIV id=Layer2 style="Z-INDEX: 2; LEFT: 3px; WIDTH: 819px; POSITION: absolute; TOP: 0px;">
+            <H2 align=center>Enhancing the Resolution of Low-Quality Images with an Example-Based Learning Approach</H2>
+            <H4 align=center>
+                <div align="center">Kevin Huynh (704283105)<br>
+                    Xinyu Wang (505029722)
+                </div>
+                <hr>
+                <H3>Abstract</H3>
+                <P> Even though technology is rapidly improving, many visual surveillance systems are equipped with subpar cameras that can not be replaced due to a variety of reasons. Handling the low-resolution images that these equipment capture is of the utmost importance and is a common problem in many fields, such as medicine, astronomy, and meteorology. Because scientists can not analyze this data directly because of its poor resolution, a great deal of research and thought have been put into how to estimate or synthesize high-resolution images from either a single or series of low-resolution images. With these estimated high-resolution images, scientists will be able to extract much more information than possible with their original data. In this project, we will completely reimplement Park et. Al's paper by using an example based, object-class-specific, and top-down method to build a model which takes low-resolution facial images as input and outputs enhanced high-resolution facial images. Furthermore, we will extend their model to another similar dataset. In the pictures below, we wish to take the low-resolution image to the far left and estimate a high-resolution image for it. Our high-resolution estimate is the second to the right, while the ground truth is to the far right. </P>
+                <img src="example_image1.png" alt="example_image1"  style="width:300px;height:300px;">
+                <img src="example_image2.png" alt="example_image2" style="width:500px;height:300px;">
+                <H3>Model and Approach</H3>
+                <p> The model will estimate and learn high-resolution shapes and textures from the original images by using learning and optimization techniques. Then, the images will be reconstructed using the shape and texture information extracted from their low-resolution counterparts. Afterwards, recursive back-projection approach will be used to enhance the quality of the estimated parameters. Lastly, we will synthesize the high-resolution images by warping the texture with the shape information and determine the error between the estimated high-resolution image and the low-resolution training image. Once the model is completed and tested on the MPI Face Database, we will train the model on a different dataset to test its applicability.</p>
+                
+                <H3>Dataset</H3>
+                <p> We will train the model using the MPI Face Database as per the original paper. This dataset is composed of 3D RGB models of 100 female and male faces of different ages and ethnicities recorded by a laser scanner. We will then additional test the resiliency of the model on another similar dataset.
+                
+                </p>
+                <H3>References</H3>
+                J.-S. Park, S.-W. Lee, "Resolution enhancement of facial image using an error back-projection of example-based learning", Proc. 6th IEEE Conf. Automatic Face and Gesture Recognition, pp. 831-836, 2004.<br><br>
+                
+                T. Vetter and N. E. Troje, "Separation of texture and shape in images of faces for image coding and synthesis," Journal of the Optical Society of America A. Vol. 14, No. 9, pp. 2152- 2161, 1997.
+                
+                
+        
+    </BODY>
+    
+</HTML>
